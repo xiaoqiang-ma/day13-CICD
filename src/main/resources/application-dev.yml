@@ -1,20 +1,9 @@
-# 开发环境配置
-spring:
-  datasource:
-    url: ${DATABASE_URL}  # 开发环境数据库
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    username: ${DATABASE_USERNAME}                               # 开发专用用户名
-    password: ${DATABASE_PASSWORD}                           # 开发专用密码
-  jpa:
-    database-platform: org.hibernate.dialect.MySQL8Dialect
-    show-sql: true                                    # 开发环境显示SQL
-    hibernate:
-      ddl-auto: update                                # 开发环境自动更新表结构
-    flyway:
-      baseline-on-migrate: true
-      locations: classpath:db/migration
-      repair-on-migrate: true
-
-# 开发环境特定配置
 server:
-  port: 8081                                         # 开发环境使用不同端口
+  port: ${PORT:8080}
+
+logging:
+  level:
+    com.oocl.springbootemployee: DEBUG
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
