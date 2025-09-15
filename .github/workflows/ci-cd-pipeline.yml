@@ -124,7 +124,6 @@ jobs:
       # 第三步：部署到开发环境
       - name: Deploy to Dev Environment
         run: |
-          railway link ${{ secrets.RAILWAY_PROJECT_ID_DEV }}
           railway up --service web --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
