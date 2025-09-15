@@ -76,26 +76,6 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
 
-    services:
-      mysql:
-        # 使用MySQL 8.0镜像
-        image: mysql:8.0
-        # 环境变量配置
-        env:
-          MYSQL_ROOT_PASSWORD: rootpassword
-          MYSQL_DATABASE: testdb
-          MYSQL_USER: testuser
-          MYSQL_PASSWORD: testpass
-        # 端口映射
-        ports:
-          - 3306:3306
-        # 容器选项：健康检查配置
-        options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -129,10 +109,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/testdb
-          SPRING_DATASOURCE_USERNAME: testuser
-          SPRING_DATASOURCE_PASSWORD: testpass
-        run: ./gradlew build sonar --info
+        run: ./gradlew sonar --info
 
   deploy-dev:
     needs: test
@@ -175,27 +152,27 @@ jobs:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
 
-#      - name: Health Check
-#        run: |
-#          echo "Starting health check (5 minutes max)..."
-#
-#          SERVICE_URL="${{ secrets.SERVICE_BASE_URL }}"
-#
-#          # Wait 60 seconds for service startup
-#          echo "Waiting 60 seconds for service to start..."
-#          sleep 60
-#
-#          # 5-minute health check with 30-second intervals
-#          for i in {1..10}; do
-#            echo "Health check attempt $i/10..."
-#            if curl -s -f --max-time 30 "${SERVICE_URL}/health" > /dev/null 2>&1; then
-#              echo "✅ Service is healthy!"
-#              exit 0
-#            fi
-#            if [ $i -lt 10 ]; then
-#              echo "⏳ Service not ready, waiting 30s..."
-#              sleep 30
-#            fi
-#          done
-#          echo "❌ Health check failed after 5 minutes"
-#          exit 1
+      - name: Health Check
+        run: |
+          echo "Starting health check (5 minutes max)..."
+
+          SERVICE_URL="${{ secrets.SERVICE_BASE_URL }}"
+
+          # Wait 60 seconds for service startup
+          echo "Waiting 60 seconds for service to start..."
+          sleep 60
+
+          # 5-minute health check with 30-second intervals
+          for i in {1..10}; do
+            echo "Health check attempt $i/10..."
+            if curl -s -f --max-time 30 "${SERVICE_URL}/health" > /dev/null 2>&1; then
+              echo "✅ Service is healthy!"
+              exit 0
+            fi
+            if [ $i -lt 10 ]; then
+              echo "⏳ Service not ready, waiting 30s..."
+              sleep 30
+            fi
+          done
+          echo "❌ Health check failed after 5 minutes"
+          exit 1
