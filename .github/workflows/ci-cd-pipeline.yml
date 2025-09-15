@@ -1,0 +1,157 @@
+# 工作流名称
+name: Spring Boot CI/CD Pipeline
+
+# 触发条件配置
+on:
+  # 当代码推送到main分支时触发
+  push:
+    branches: [ "main" ]
+  # 允许手动触发工作流（用于生产发布）
+  workflow_dispatch:
+
+# 环境变量配置
+env:
+  JAVA_VERSION: '17'
+
+# 工作流任务定义
+jobs:
+  # 1. 构建任务
+  build:
+    # 运行环境
+    runs-on: ubuntu-latest
+
+    # 步骤定义
+    steps:
+      # 第一步：检出代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 第二步：设置Java环境
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: gradle
+
+      # 第三步：授予Gradle执行权限
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # 第四步：构建项目（跳过测试）
+      - name: Build with Gradle
+        run: ./gradlew build -x test
+
+  # 2. 测试任务（包括单元测试和集成测试）
+  test:
+    # 运行环境
+    runs-on: ubuntu-latest
+    # 依赖构建任务，确保先构建再测试
+    needs: build
+
+    # 服务容器配置（用于运行MySQL测试数据库）
+    services:
+      mysql:
+        # 使用MySQL 8.0镜像
+        image: mysql:8.0
+        # 环境变量配置
+        env:
+          MYSQL_ROOT_PASSWORD: rootpassword
+          MYSQL_DATABASE: testdb
+          MYSQL_USER: testuser
+          MYSQL_PASSWORD: testpass
+        # 端口映射
+        ports:
+          - 3306:3306
+        # 容器选项：健康检查配置
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    # 步骤定义
+    steps:
+      # 第一步：检出代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 第二步：设置Java环境
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: gradle
+
+      # 第三步：授予Gradle执行权限
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # 第四步：等待MySQL数据库就绪
+      - name: Wait for MySQL to be ready
+        # 简单的等待方式，确保数据库启动完成
+        run: sleep 20
+
+      # 第五步：运行测试
+      - name: Run tests with Gradle
+        run: ./gradlew test
+        # 测试环境变量配置
+        env:
+          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/testdb
+          SPRING_DATASOURCE_USERNAME: testuser
+          SPRING_DATASOURCE_PASSWORD: testpass
+
+  # 3. 开发环境部署（自动）
+  deploy-dev:
+    # 运行环境
+    runs-on: ubuntu-latest
+    # 依赖测试任务，确保测试通过后才部署
+    needs: test
+    # 环境名称（用于GitHub界面显示）
+    environment: dev
+
+    # 步骤定义
+    steps:
+      # 第一步：检出代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 第二步：安装Railway CLI
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      # 第三步：部署到开发环境
+      - name: Deploy to Dev Environment
+        run: railway up --project ${{ secrets.RAILWAY_PROJECT_ID_DEV }} --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+  # 4. 生产环境部署（手动触发）
+  deploy-prod:
+    # 运行环境
+    runs-on: ubuntu-latest
+    # 依赖测试任务，确保测试通过后才部署
+    needs: test
+    # 环境名称（用于GitHub界面显示）
+    environment: prod
+
+    # 手动触发配置
+    # 这个任务不会自动运行，需要在GitHub Actions界面手动点击触发
+    if: github.event_name == 'workflow_dispatch'
+
+    # 步骤定义
+    steps:
+      # 第一步：检出代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 第二步：安装Railway CLI
+      - name: Install Railway CLI
+        run: npm install -g @railway.cli
+
+      # 第三步：部署到生产环境
+      - name: Deploy to Production Environment
+        run: railway up --project ${{ secrets.RAILWAY_PROJECT_ID_PROD }} --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
