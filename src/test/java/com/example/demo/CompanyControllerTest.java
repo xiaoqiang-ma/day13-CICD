@@ -109,7 +109,7 @@ public class CompanyControllerTest {
         createSpringCompany();
         createSpringCompany();
 
-        MockHttpServletRequestBuilder request = get("/companies?page=1&size=5")
+        MockHttpServletRequestBuilder request = get("/companies?page=1&size=1")
                 .contentType(MediaType.APPLICATION_JSON);
 
         mockMvc.perform(request)

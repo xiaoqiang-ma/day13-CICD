@@ -123,9 +123,10 @@ jobs:
 
       # 第三步：部署到开发环境
       - name: Deploy to Dev Environment
-        run: railway up --project ${{ secrets.RAILWAY_PROJECT_ID_DEV }} --detach
+        run: railway up --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT: ${{ secrets.RAILWAY_PROJECT_ID_DEV }}
 
   # 4. 生产环境部署（手动触发）
   deploy-prod:
